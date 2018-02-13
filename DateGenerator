@@ -1,0 +1,33 @@
+// DateGenerator
+let
+    Source = () as table =>
+  let
+    StartDate = Date.From(#date(1990,1,1)),
+    EndDate = Date.From(#date(2090,1,1)),
+    DayCount = Duration.Days(Duration.From(EndDate - StartDate)) + 1,
+    Source = List.Dates(StartDate,DayCount,#duration(1,0,0,0)),
+    TableFromList = Table.FromList(Source, Splitter.SplitByNothing()),
+    ChangedType = Table.TransformColumnTypes(TableFromList,{{"Column1", type date}}),
+    RenamedColumns = Table.RenameColumns(ChangedType,{{"Column1", "d_date"}}),
+    InsertYear = Table.AddColumn(RenamedColumns, "d_year", each Date.Year([d_date])),
+    InsertQuarter = Table.AddColumn(InsertYear, "d_quarter", each Date.QuarterOfYear([d_date])),
+    InsertMonth = Table.AddColumn(InsertQuarter, "d_month", each Date.Month([d_date])),
+    InsertDay = Table.AddColumn(InsertMonth, "d_day_of_month", each Date.Day([d_date])),
+    InsertDayInt = Table.AddColumn(InsertDay, "d_date_int", each [d_year] * 10000 + [d_month] * 100 + [d_day_of_month]),
+    InsertMonthName = Table.AddColumn(InsertDayInt, "d_month_name", each Date.ToText([d_date], "MMMM"), type text),
+    InsertCalendarMonth = Table.AddColumn(InsertMonthName, "d_month_in_calendar", each (try(Text.Range([d_month_name],0,3)) otherwise [d_month_name]) & " " & Number.ToText([d_year])),
+    InsertCalendarQtr = Table.AddColumn(InsertCalendarMonth, "d_quarter_in_calendar", each "Q" & Number.ToText([d_quarter]) & " " & Number.ToText([d_year])),
+    InsertDayWeek = Table.AddColumn(InsertCalendarQtr, "d_day_in_week", each Date.DayOfWeek([d_date],1) + 1),
+    InsertDayName = Table.AddColumn(InsertDayWeek, "d_day_name", each Date.ToText([d_date], "dddd"), type text),
+    InsertWeekEnding = Table.AddColumn(InsertDayName, "d_week_ending", each Date.AddDays(Date.EndOfWeek([d_date]),1), type date),
+    InsertWeekOfYear = Table.AddColumn(InsertWeekEnding , "d_week", each Date.WeekOfYear([d_date]))
+  in
+    InsertWeekEnding
+in
+    Source
+
+// dimDate
+let
+    Source = DateGenerator()
+in
+    Source
